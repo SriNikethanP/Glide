@@ -1,0 +1,79 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Environment variables
+.env
+.env.development
+.env.production
+.env.local
+
+# MongoDB
+*.mongodb
+
+# Build output
+dist/
+build/
+.DS_Store
+
+# React Native Specific Files
+.expo/
+.expo-shared/
+android/
+ios/
+*.xcworkspace/
+Pods/
+*.xcodeproj/
+*.pbxproj
+*.lock
+*.apk
+*.aab
+*.keystore
+
+# React Frontend
+/build
+/static
+
+# Coverage reports
+coverage/
+.nyc_output/
+
+# Mac system files
+.DS_Store
+Thumbs.db
+
+# Misc
+.idea/
+.vscode/
+*.swp
+*.sublime-project
+*.sublime-workspace
+
+# Debugging and Testing
+debug/
+out/
+*.log
+
+# Optional npm cache
+.npm/
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Local development files
+*.local
+
+#
