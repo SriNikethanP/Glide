@@ -4,4 +4,9 @@ import dotenv from "dotenv";
 
 const app = express();
 
-app.use()
+app.use("/api/auth", authRoutes);
+app.use("/api/messages", messageRoutes);
+
+app.listen(5000, () => {
+  console.log(`Server is running at port 5000`);
+});
