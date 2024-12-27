@@ -1,34 +1,12 @@
 import { View, Text, StyleSheet, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
-import React from 'react';
+import { getContacts } from '../utils/api';
+import React, { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import Home from './Home';
 
 
 export default function ContactList({ navigation }) {
   const contacts = [
-    {
-      id: 1,
-      name: 'John Doe',
-      bio: 'Living life one day at a time',
-      image: 'https://via.placeholder.com/50',
-      isOnline: true,
-    },
-    {
-      id: 2,
-      name: 'Jane Smith',
-      bio: 'Photography enthusiast',
-      image: 'https://via.placeholder.com/50',
-      isOnline: false,
-    },
-    {
-      id: 3,
-      name: 'Michael Johnson',
-      bio: 'Software Developer',
-      image: 'https://via.placeholder.com/50',
-      isOnline: true,
-    },
-    // Add more contacts as needed
+
   ];
 
   return (

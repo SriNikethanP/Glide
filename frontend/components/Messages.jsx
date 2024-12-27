@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -10,54 +10,30 @@ import {
   Platform,
   ScrollView,
   Modal,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { getMessages } from "../utils/api";
 
 export default function MessageScreen({ route, navigation }) {
   const { userId, username, userImage, lastSeen, isOnline } = route.params;
   const scrollViewRef = useRef();
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
-  
-  const [chatMessages, setChatMessages] = useState([
-    {
-      id: 1,
-      text: "Hey, how are you?",
-      sender: true,
-      timestamp: "10:30 AM",
-      date: "2024-01-20",
-      seen: true,
-      senderImage: userImage // Current user's image
-    },
-    {
-      id: 2,
-      text: "I'm good, thanks! How about you?",
-      sender: false,
-      timestamp: "10:31 AM",
-      date: "2024-01-20",
-      seen: true,
-      senderImage: userImage // Receiver's image
-    },
-    {
-      id: 3,
-      text: "Let's meet tomorrow!",
-      sender: true,
-      timestamp: "09:15 AM",
-      date: "2024-01-19",
-      seen: false,
-      senderImage: userImage
-    },
-    {
-      id: 4,
-      text: "Sure, that works for me",
-      sender: false,
-      timestamp: "09:20 AM",
-      date: "2024-01-19",
-      seen: false,
-      senderImage: userImage
-    }
-  ]);
+
+  const [chatMessages, setChatMessages] = useState([]);
+
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        const messages = await getMessages(userId);
+        setChatMessages(messages);
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+      }
+    };
+    fetchMessages();
+  }, [userId]);
 
   // Auto scroll to bottom when new messages arrive
   useEffect(() => {
@@ -75,19 +51,19 @@ export default function MessageScreen({ route, navigation }) {
     } else if (messageDate.toDateString() === yesterday.toDateString()) {
       return "Yesterday";
     } else {
-      return messageDate.toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric'
+      return messageDate.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
       });
     }
   };
 
   const DateSeparator = ({ date }) => (
     <View style={styles.dateSeparatorContainer}>
-      <View style={styles.dateSeparatorLine} />
+      {/* <View style={styles.dateSeparatorLine} /> */}
       <Text style={styles.dateSeparatorText}>{formatDate(date)}</Text>
-      <View style={styles.dateSeparatorLine} />
+      {/* <View style={styles.dateSeparatorLine} /> */}
     </View>
   );
 
@@ -97,18 +73,18 @@ export default function MessageScreen({ route, navigation }) {
         id: chatMessages.length + 1,
         text: message,
         sender: true,
-        timestamp: new Date().toLocaleTimeString([], { 
-          hour: '2-digit', 
-          minute: '2-digit'
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
         }),
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toISOString().split("T")[0],
         seen: false,
-        senderImage: userImage
+        senderImage: userImage,
       };
-      
+
       setChatMessages([...chatMessages, newMessage]);
-      setMessage('');
-      
+      setMessage("");
+
       // Scroll to bottom after sending message
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -120,42 +96,89 @@ export default function MessageScreen({ route, navigation }) {
     const isSender = message.sender;
 
     return (
-      <View style={[
-        styles.messageRow,
-        isSender ? styles.senderRow : styles.receiverRow
-      ]}>
+      <View
+        style={[
+          styles.messageRow,
+          isSender ? styles.senderRow : styles.receiverRow,
+        ]}
+      >
         {!isSender && (
           <Image
             source={{ uri: message.senderImage }}
             style={styles.messageAvatar}
           />
         )}
-        
+
         <View style={styles.messageContentContainer}>
-          <View style={[
-            styles.messageBubble,
-            isSender ? styles.senderBubble : styles.receiverBubble
-          ]}>
-            <Text style={[
-              styles.messageText,
-              isSender ? styles.senderText : styles.receiverText
-            ]}>
+          <View
+            style={[
+              styles.messageBubble,
+              isSender ? styles.senderBubble : styles.receiverBubble,
+            ]}
+          >
+            <Text
+              style={[
+                styles.messageText,
+                isSender ? styles.senderText : styles.receiverText,
+              ]}
+            >
               {message.text}
             </Text>
           </View>
-          
-          <Text style={[
-            styles.timestamp,
-            isSender ? styles.senderTimestamp : styles.receiverTimestamp
-          ]}>
-            {message.timestamp}
-          </Text>
-          
-          {isSender && (
-            <Text style={styles.statusText}>
-              {message.seen ? '' : 'sent'}
-            </Text>
+          {/* {isSender && (
+            <Text style={styles.statusText}>{message.seen ? "" : "1"}</Text>
           )}
+          <Text
+            style={[
+              styles.timestamp,
+              isSender ? styles.senderTimestamp : styles.receiverTimestamp,
+            ]}
+          >
+            {message.timestamp}
+          </Text> */}
+
+          <View
+            style={[
+              styles.messageContainer,
+              isSender ? styles.senderContainer : styles.receiverContainer,
+            ]}
+          >
+            <View style={styles.bubbleWrapper}>
+              <View
+                style={[
+                  styles.messageBubble,
+                  isSender ? styles.senderBubble : styles.receiverBubble,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.messageText,
+                    isSender ? styles.senderText : styles.receiverText,
+                  ]}
+                >
+                  {message.text}
+                </Text>
+              </View>
+
+              <View style={styles.messageMetadata}>
+                {isSender && (
+                  <Text style={styles.seenStatus}>
+                    {message.seen ? " " : "1"}
+                  </Text>
+                )}
+                <Text
+                  style={[
+                    styles.timestamp,
+                    isSender
+                      ? styles.senderTimestamp
+                      : styles.receiverTimestamp,
+                  ]}
+                >
+                  {message.timestamp}
+                </Text>
+              </View>
+            </View>
+          </View>
         </View>
 
         {isSender && (
@@ -174,7 +197,7 @@ export default function MessageScreen({ route, navigation }) {
       visible={showOptions}
       onRequestClose={() => setShowOptions(false)}
     >
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.modalOverlay}
         onPress={() => setShowOptions(false)}
       >
@@ -182,7 +205,7 @@ export default function MessageScreen({ route, navigation }) {
           <TouchableOpacity style={styles.optionItem}>
             <Text style={styles.optionText}>View Profile</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.optionItem}>
+          {/* <TouchableOpacity style={styles.optionItem}>
             <Text style={styles.optionText}>Block</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.optionItem}>
@@ -193,39 +216,40 @@ export default function MessageScreen({ route, navigation }) {
           </TouchableOpacity>
           <TouchableOpacity style={styles.optionItem}>
             <Text style={styles.optionText}>Clear Chat</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </TouchableOpacity>
     </Modal>
   );
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
     >
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
         >
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
-        
-        <Image
-          source={{ uri: userImage }}
-          style={styles.profileImage}
-        />
-        
+
+        <Image source={{ uri: userImage }} style={styles.profileImage} />
+
         <View style={styles.headerInfo}>
           <Text style={styles.userName}>{username}</Text>
           <Text style={styles.lastSeen}>
-            {isTyping ? "typing..." : isOnline ? "Online" : `Last seen ${lastSeen}`}
+            {isTyping
+              ? "typing..."
+              : isOnline
+              ? "Online"
+              : `Last seen ${lastSeen}`}
           </Text>
         </View>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           onPress={() => setShowOptions(true)}
           style={styles.optionsButton}
         >
@@ -233,16 +257,18 @@ export default function MessageScreen({ route, navigation }) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
+      <ScrollView
         ref={scrollViewRef}
         style={styles.chatContainer}
         contentContainerStyle={styles.chatContent}
-        onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+        onContentSizeChange={() =>
+          scrollViewRef.current?.scrollToEnd({ animated: true })
+        }
       >
         {chatMessages.map((chat, index) => {
-          let showDate = index === 0 || 
-                        chatMessages[index - 1].date !== chat.date;
-          
+          let showDate =
+            index === 0 || chatMessages[index - 1].date !== chat.date;
+
           return (
             <View key={chat.id}>
               {showDate && <DateSeparator date={chat.date} />}
@@ -261,10 +287,7 @@ export default function MessageScreen({ route, navigation }) {
           multiline
           maxHeight={100}
         />
-        <TouchableOpacity 
-          style={styles.sendButton}
-          onPress={sendMessage}
-        >
+        <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
           <Ionicons name="send" size={24} color="white" />
         </TouchableOpacity>
       </View>
@@ -277,76 +300,134 @@ export default function MessageScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#24B2FF',
+    backgroundColor: "#24B2FF",
     marginTop: 20,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 10,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
-    height:80
+    borderBottomColor: "#e5e5e5",
+    height: 80,
   },
   backButton: {
     padding: 5,
   },
   profileImage: {
     width: 50,
-    height:50,
+    height: 50,
     borderRadius: 40,
     marginLeft: 10,
   },
+  // messageContainer: {
+  //   flexDirection: "row",
+  //   marginVertical: 4,
+  //   paddingHorizontal: 8,
+  // },
+  // senderContainer: {
+  //   justifyContent: "flex-end",
+  // },
+  // receiverContainer: {
+  //   justifyContent: "flex-start",
+  // },
+  bubbleWrapper: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    maxWidth: "80%",
+  },
+  // messageBubble: {
+  //   padding: 8,
+  //   borderRadius: 16,
+  //   maxWidth: "80%",
+  // },
+  // senderBubble: {
+  //   backgroundColor: "#0084ff",
+  //   borderBottomRightRadius: 4,
+  // },
+  // receiverBubble: {
+  //   backgroundColor: "#e4e6eb",
+  //   borderBottomLeftRadius: 4,
+  // },
+  messageText: {
+    fontSize: 16,
+  },
+  // senderText: {
+  //   color: "#ffffff",
+  // },
+  // receiverText: {
+  //   color: "#ffffff",
+  // },
+  messageMetadata: {
+    flexDirection: "column",
+    marginLeft: 4,
+    alignItems: "flex-end",
+  },
+  seenStatus: {
+    fontSize: 8,
+    fontWeight: "bold",
+    color: "#FFEA00",
+  },
+  timestamp: {
+    fontSize: 8,
+    color: "#8e8e8e",
+  },
+  // senderTimestamp: {
+  //   textAlign: "right",
+  // },
+  // receiverTimestamp: {
+  //   textAlign: "left",
+  // },
   headerInfo: {
     flex: 1,
     marginLeft: 10,
   },
   userName: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   lastSeen: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
   },
   optionsButton: {
     padding: 5,
   },
   chatContainer: {
     flex: 1,
-    backgroundColor: '#24B2FF',
+    backgroundColor: "#24B2FF",
   },
   chatContent: {
     paddingVertical: 10,
   },
   messageRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
+    flexDirection: "row",
+    alignItems: "flex-end",
     marginVertical: 4,
     paddingHorizontal: 8,
   },
   senderRow: {
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
   },
   receiverRow: {
-    justifyContent: 'flex-start',
+    justifyContent: "flex-start",
   },
   messageContentContainer: {
-    maxWidth: '70%',
+    maxWidth: "70%",
     marginHorizontal: 8,
   },
   messageBubble: {
     padding: 12,
     borderRadius: 20,
-    maxWidth: '100%',
+    maxWidth: "100%",
   },
   senderBubble: {
-    backgroundColor: '#FFEA00',
+    backgroundColor: "#FFEA00",
     borderBottomRightRadius: 4,
   },
   receiverBubble: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomLeftRadius: 4,
   },
   messageText: {
@@ -354,10 +435,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   senderText: {
-    color: '#000000',
+    color: "#000000",
   },
   receiverText: {
-    color: '#000000',
+    color: "#000000",
   },
   messageAvatar: {
     width: 28,
@@ -367,34 +448,35 @@ const styles = StyleSheet.create({
   },
   timestamp: {
     fontSize: 11,
-    color: '#fff', 
+    color: "#fff",
     marginTop: 2,
   },
   senderTimestamp: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     marginLeft: 4,
   },
   receiverTimestamp: {
-    alignSelf: 'flex-end',
+    alignSelf: "flex-end",
     marginRight: 4,
   },
   statusText: {
-    fontSize: 10,
-    color: '#fff',
+    fontSize: 8,
+    fontWeight: "bold",
+    color: "#FFEA00",
     marginTop: 2,
     marginLeft: 4,
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 10,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderTopWidth: 1,
-    borderTopColor: '#e5e5e5',
+    borderTopColor: "#e5e5e5",
   },
   input: {
     flex: 1,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: "#f0f0f0",
     borderRadius: 20,
     paddingHorizontal: 15,
     paddingVertical: 8,
@@ -403,37 +485,37 @@ const styles = StyleSheet.create({
     maxHeight: 100,
   },
   sendButton: {
-    backgroundColor: '#24B2FF',
+    backgroundColor: "#24B2FF",
     width: 40,
     height: 40,
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   dateSeparatorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     marginVertical: 10,
     paddingHorizontal: 15,
   },
   dateSeparatorLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#fff',  
+    backgroundColor: "#fff",
   },
   dateSeparatorText: {
     fontSize: 12,
-    color: '#fff',  
+    color: "#fff",
     marginHorizontal: 10,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
   },
   optionsContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
@@ -441,10 +523,10 @@ const styles = StyleSheet.create({
   optionItem: {
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
+    borderBottomColor: "#e5e5e5",
   },
   optionText: {
     fontSize: 16,
-    color: '#000',
+    color: "#000",
   },
 });
