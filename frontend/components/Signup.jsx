@@ -11,6 +11,7 @@ import React, { useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Signup() {
   const navigation = useNavigation();
@@ -34,8 +35,14 @@ export default function Signup() {
         }
       );
 
-      console.log("User registered successfully:", response.data);
-
+      // console.log("User registered successfully:", response.data);
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Signup Error:", errorData.message);
+        throw new Error(errorData.message || "Signup failed");
+      }
+      const data = await response.json();
+      await AsyncStorage.setItem("senderId", data._id);
       setfullName("");
       setEmail("");
       setPassword("");

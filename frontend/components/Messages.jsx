@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { getMessages } from "../utils/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function MessageScreen({ route, navigation }) {
   const { userId, username, userImage, lastSeen, isOnline } = route.params;
@@ -29,7 +30,7 @@ export default function MessageScreen({ route, navigation }) {
         const messages = await getMessages(userId);
         setChatMessages(messages);
       } catch (error) {
-        console.error('Error fetching messages:', error);
+        console.error("Error fetching messages:", error);
       }
     };
     fetchMessages();
@@ -42,58 +43,111 @@ export default function MessageScreen({ route, navigation }) {
 
   const formatDate = (dateString) => {
     const messageDate = new Date(dateString);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
 
-    if (messageDate.toDateString() === today.toDateString()) {
-      return "Today";
-    } else if (messageDate.toDateString() === yesterday.toDateString()) {
-      return "Yesterday";
-    } else {
-      return messageDate.toLocaleDateString("en-US", {
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      });
+    // Check if the date is valid
+    if (!messageDate) {
+      console.error("Invalid date:", dateString);
+      return "";
     }
+
+    const today = new Date();
+
+    // Reset the time part for comparison purposes (only date)
+    today.setHours(0, 0, 0, 0);
+
+    // Check if the message was sent today
+    if (messageDate >= today) {
+      return "Today";
+    }
+
+    // Check if the message was sent yesterday
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+
+    if (messageDate >= yesterday && messageDate < today) {
+      return "Yesterday";
+    }
+
+    // For older dates, format in the "Month Day, Year" format
+    return messageDate.toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
   };
 
   const DateSeparator = ({ date }) => (
     <View style={styles.dateSeparatorContainer}>
-      {/* <View style={styles.dateSeparatorLine} /> */}
       <Text style={styles.dateSeparatorText}>{formatDate(date)}</Text>
-      {/* <View style={styles.dateSeparatorLine} /> */}
     </View>
   );
+  function formatMessageTime(timestamp) {
+    const date = new Date(timestamp);
 
-  const sendMessage = () => {
+    // Extract hours and minutes
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+
+    // Format time as hh:mm (24-hour format)
+    const formattedTime = `${hours}:${minutes.toString().padStart(2, "0")}`;
+
+    return formattedTime;
+  }
+  const sendMessage = async () => {
     if (message.trim().length > 0) {
-      const newMessage = {
-        id: chatMessages.length + 1,
-        text: message,
-        sender: true,
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        date: new Date().toISOString().split("T")[0],
-        seen: false,
-        senderImage: userImage,
-      };
+      try {
+        const senderId = await AsyncStorage.getItem("senderId");
+        if (!senderId) {
+          console.log("SenderId not found in AsyncStorage");
+          return;
+        }
 
-      setChatMessages([...chatMessages, newMessage]);
-      setMessage("");
+        const response = await fetch(
+          `http://192.168.31.211:5000/api/messages/send/${userId}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              senderId: senderId,
+              receiverId: userId,
+              text: message,
+            }),
+          }
+        );
 
-      // Scroll to bottom after sending message
-      setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+        const data = await response.json();
+
+        if (response.ok) {
+          // Update the chat UI with the new message
+          const newMessage = {
+            ...data, // Use the data received from the backend
+            // This will depend on your app's logic
+            senderImage: userImage, // You can pass the user image if needed
+          };
+
+          setChatMessages((prevMessages) => [...prevMessages, newMessage]);
+          setMessage(""); // Clear input field
+
+          // Scroll to bottom after sending message
+          setTimeout(() => {
+            scrollViewRef.current?.scrollToEnd({ animated: true });
+          }, 100);
+
+          console.log("Message sent to backend:", data);
+        } else {
+          console.error("Error sending message:", data);
+        }
+      } catch (error) {
+        console.error("Failed to send message:", error);
+      }
     }
   };
 
   const MessageBubble = ({ message }) => {
-    const isSender = message.sender;
+    const isSender = message.senderId === userId;
 
     return (
       <View
@@ -109,78 +163,46 @@ export default function MessageScreen({ route, navigation }) {
           />
         )}
 
-        <View style={styles.messageContentContainer}>
-          <View
-            style={[
-              styles.messageBubble,
-              isSender ? styles.senderBubble : styles.receiverBubble,
-            ]}
-          >
-            <Text
-              style={[
-                styles.messageText,
-                isSender ? styles.senderText : styles.receiverText,
-              ]}
-            >
-              {message.text}
-            </Text>
-          </View>
-          {/* {isSender && (
-            <Text style={styles.statusText}>{message.seen ? "" : "1"}</Text>
-          )}
-          <Text
-            style={[
-              styles.timestamp,
-              isSender ? styles.senderTimestamp : styles.receiverTimestamp,
-            ]}
-          >
-            {message.timestamp}
-          </Text> */}
-
-          <View
-            style={[
-              styles.messageContainer,
-              isSender ? styles.senderContainer : styles.receiverContainer,
-            ]}
-          >
-            <View style={styles.bubbleWrapper}>
-              <View
+        <View
+          style={[
+            styles.messageContainer,
+            isSender ? styles.senderContainer : styles.receiverContainer,
+          ]}
+        >
+          <View style={styles.bubbleWrapper}>
+            <View style={styles.messageMetadata}>
+              {isSender && (
+                <Text style={styles.seenStatus}>
+                  {message.seen ? " " : "1"}
+                </Text>
+              )}
+              <Text
                 style={[
-                  styles.messageBubble,
-                  isSender ? styles.senderBubble : styles.receiverBubble,
+                  styles.timestamp,
+                  isSender ? styles.senderTimestamp : styles.receiverTimestamp,
                 ]}
               >
-                <Text
-                  style={[
-                    styles.messageText,
-                    isSender ? styles.senderText : styles.receiverText,
-                  ]}
-                >
-                  {message.text}
-                </Text>
-              </View>
+                {formatMessageTime(message.timestamp)}
+              </Text>
+            </View>
 
-              <View style={styles.messageMetadata}>
-                {isSender && (
-                  <Text style={styles.seenStatus}>
-                    {message.seen ? " " : "1"}
-                  </Text>
-                )}
-                <Text
-                  style={[
-                    styles.timestamp,
-                    isSender
-                      ? styles.senderTimestamp
-                      : styles.receiverTimestamp,
-                  ]}
-                >
-                  {message.timestamp}
-                </Text>
-              </View>
+            <View
+              style={[
+                styles.messageBubble,
+                isSender ? styles.senderBubble : styles.receiverBubble,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.messageText,
+                  isSender ? styles.senderText : styles.receiverText,
+                ]}
+              >
+                {message.text}
+              </Text>
             </View>
           </View>
         </View>
-
         {isSender && (
           <Image
             source={{ uri: message.senderImage }}
@@ -205,18 +227,6 @@ export default function MessageScreen({ route, navigation }) {
           <TouchableOpacity style={styles.optionItem}>
             <Text style={styles.optionText}>View Profile</Text>
           </TouchableOpacity>
-          {/* <TouchableOpacity style={styles.optionItem}>
-            <Text style={styles.optionText}>Block</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.optionItem}>
-            <Text style={styles.optionText}>Restrict</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.optionItem}>
-            <Text style={styles.optionText}>Report</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.optionItem}>
-            <Text style={styles.optionText}>Clear Chat</Text>
-          </TouchableOpacity> */}
         </View>
       </TouchableOpacity>
     </Modal>
@@ -270,8 +280,8 @@ export default function MessageScreen({ route, navigation }) {
             index === 0 || chatMessages[index - 1].date !== chat.date;
 
           return (
-            <View key={chat.id}>
-              {showDate && <DateSeparator date={chat.date} />}
+            <View key={chat._id}>
+              {showDate && <DateSeparator date={chat.timestamp} />}
               <MessageBubble message={chat} />
             </View>
           );
@@ -306,6 +316,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
+    marginTop: 15,
     padding: 10,
     backgroundColor: "#fff",
     borderBottomWidth: 1,
@@ -321,51 +332,21 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     marginLeft: 10,
   },
-  // messageContainer: {
-  //   flexDirection: "row",
-  //   marginVertical: 4,
-  //   paddingHorizontal: 8,
-  // },
-  // senderContainer: {
-  //   justifyContent: "flex-end",
-  // },
-  // receiverContainer: {
-  //   justifyContent: "flex-start",
-  // },
   bubbleWrapper: {
     flexDirection: "row",
     alignItems: "flex-end",
     maxWidth: "80%",
   },
-  // messageBubble: {
-  //   padding: 8,
-  //   borderRadius: 16,
-  //   maxWidth: "80%",
-  // },
-  // senderBubble: {
-  //   backgroundColor: "#0084ff",
-  //   borderBottomRightRadius: 4,
-  // },
-  // receiverBubble: {
-  //   backgroundColor: "#e4e6eb",
-  //   borderBottomLeftRadius: 4,
-  // },
   messageText: {
     fontSize: 16,
   },
-  // senderText: {
-  //   color: "#ffffff",
-  // },
-  // receiverText: {
-  //   color: "#ffffff",
-  // },
   messageMetadata: {
     flexDirection: "column",
-    marginLeft: 4,
+    marginRight: 4,
     alignItems: "flex-end",
   },
   seenStatus: {
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: "bold",
     color: "#FFEA00",
   },
@@ -373,14 +354,10 @@ const styles = StyleSheet.create({
     fontSize: 8,
     color: "#8e8e8e",
   },
-  // senderTimestamp: {
-  //   textAlign: "right",
-  // },
-  // receiverTimestamp: {
-  //   textAlign: "left",
-  // },
   headerInfo: {
     flex: 1,
+    flexDirection: "column",
+    gap: 3,
     marginLeft: 10,
   },
   userName: {
@@ -460,7 +437,7 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   statusText: {
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: "bold",
     color: "#FFEA00",
     marginTop: 2,
@@ -473,6 +450,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderTopWidth: 1,
     borderTopColor: "#e5e5e5",
+    maxHeight: 100, // This restricts max height
+    overflow: "hidden",
   },
   input: {
     flex: 1,
@@ -482,7 +461,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginRight: 10,
     fontSize: 16,
-    maxHeight: 100,
+    overflow: "scroll",
+    maxHeight: 80,
   },
   sendButton: {
     backgroundColor: "#24B2FF",
@@ -495,19 +475,22 @@ const styles = StyleSheet.create({
   dateSeparatorContainer: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "center", // Centers content horizontally
     marginVertical: 10,
+    borderRadius: 20,
+    paddingVertical: 5,
     paddingHorizontal: 15,
-  },
-  dateSeparatorLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#fff",
   },
   dateSeparatorText: {
     fontSize: 12,
     color: "#fff",
     marginHorizontal: 10,
+    fontSize: 12,
+    color: "#fff",
+    paddingHorizontal: 12,
+    paddingVertical: 3,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    borderRadius: 10,
   },
   modalOverlay: {
     flex: 1,

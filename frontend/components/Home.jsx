@@ -7,7 +7,6 @@ import {
   Image,
   TouchableOpacity,
   Modal,
-  Alert,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
@@ -18,85 +17,29 @@ export default function Home() {
   const navigation = useNavigation();
   const [showOptions, setShowOptions] = useState(false);
   const [starredChats, setStarredChats] = useState([]);
-
-  //  const [messages, setMessages] = useState([]);
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true); // Show loading state
-      const { chats } = await getContacts(); // Call the API function
-      // setMessages(messages);
+      const chats = await getContacts(); // Call the API function
       setChats(chats);
       setLoading(false);
-      console.log(chats);
-      // Hide loading state
+      // console.log("chats:", chats);
     };
     fetchData();
   }, []);
 
   const handleChatPress = (chat) => {
     navigation.navigate("Messages", {
-      userId: chat.id,
-      username: chat.username,
-      userImage: chat.image,
-      lastSeen: chat.lastSeen,
-      isOnline: chat.isOnline,
+      userId: chat._id,
+      username: chat.fullName,
+      userImage: chat.profilePic,
+      lastSeen: formatLastActiveTime(chat.lastActive),
+      isOnline: chat.onlineStatus,
     });
   };
-
-  // const handleLongPress = (chat) => {
-  //   Alert.alert(
-  //     "Chat Options",
-  //     "",
-  //     [
-  //       {
-  //         text: "Block this account",
-  //         onPress: () => handleBlockAccount(chat.id)
-  //       },
-  //       {
-  //         text: "Restrict",
-  //         onPress: () => handleRestrict(chat.id)
-  //       },
-  //       {
-  //         text: "Star contact",
-  //         onPress: () => handleStarContact(chat)
-  //       },
-  //       {
-  //         text: "Clear chat",
-  //         onPress: () => handleClearChat(chat.id)
-  //       },
-  //       {
-  //         text: "Cancel",
-  //         style: "cancel"
-  //       }
-  //     ]
-  //   );
-  // };
-
-  // const handleBlockAccount = (id) => {
-  //   // Implement block logic
-  //   console.log('Blocked:', id);
-  // };
-
-  // const handleRestrict = (id) => {
-  //   // Implement restrict logic
-  //   console.log('Restricted:', id);
-  // };
-
-  // const handleStarContact = (chat) => {
-  //   setStarredChats(prev =>
-  //     prev.includes(chat.id)
-  //       ? prev.filter(id => id !== chat.id)
-  //       : [...prev, chat.id]
-  //   );
-  // };
-
-  // const handleClearChat = (id) => {
-  //   // Implement clear chat logic
-  //   console.log('Cleared chat:', id);
-  // };
 
   const OptionsModal = () => (
     <Modal
@@ -112,23 +55,25 @@ export default function Home() {
           <TouchableOpacity style={styles.optionItem}>
             <Text style={styles.optionText}>Your Profile</Text>
           </TouchableOpacity>
-          {/* <TouchableOpacity style={styles.optionItem}>
-              <Text style={styles.optionText}>Create Group</Text>
-            </TouchableOpacity> */}
-          {/* <TouchableOpacity style={styles.optionItem}>
-              <Text style={styles.optionText}>Starred Messages</Text>
-            </TouchableOpacity> */}
           <TouchableOpacity style={styles.optionItem}>
             <Text style={styles.optionText}>Settings</Text>
           </TouchableOpacity>
-          {/* <TouchableOpacity style={styles.optionItem}>
-              <Text style={styles.optionText}>Blocked Accounts</Text>
-            </TouchableOpacity> */}
         </View>
       </TouchableOpacity>
     </Modal>
   );
+  function formatLastActiveTime(lastActive) {
+    const date = new Date(lastActive);
 
+    // Extract hours and minutes
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+
+    // Format time as hh:mm (24-hour format)
+    const formattedTime = `${hours}:${minutes.toString().padStart(2, "0")}`;
+
+    return formattedTime;
+  }
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -152,7 +97,39 @@ export default function Home() {
       <ScrollView contentContainerStyle={styles.chatListContainer}>
         <Text style={styles.recentHeader}>Recent Messages</Text>
         {chats && chats.length > 0 ? (
-          <Text style={"center"}> chats available</Text>
+          chats.map((chat) => (
+            <TouchableOpacity
+              key={chat._id}
+              onPress={() => handleChatPress(chat)}
+            >
+              <View style={styles.chatItem}>
+                <View style={styles.avatarContainer}>
+                  <Image
+                    source={{ uri: chat.profilePic }}
+                    style={styles.chatImage}
+                  />
+                  {chat.onlineStatus && <View style={styles.onlineIndicator} />}
+                </View>
+                <View style={styles.chatDetails}>
+                  <Text style={styles.username}>{chat.fullName}</Text>
+                  {/* <Text style={styles.chatText}>{chat.text}</Text> */}
+                </View>
+                <View style={styles.chatTimeContainer}>
+                  <Text style={styles.timestamp}>
+                    {formatLastActiveTime(chat.lastActive)}
+                  </Text>
+                  {starredChats.includes(chat.id) && (
+                    <Ionicons
+                      name="star"
+                      size={16}
+                      color="#FFD700"
+                      style={styles.starIcon}
+                    />
+                  )}
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))
         ) : (
           <Text style={"center"}>No chats available</Text>
         )}
@@ -174,7 +151,7 @@ export default function Home() {
         >
           <Image
             source={require("../assets/User_icon.png")}
-            style={{ width: 35, height: 35 }}
+            style={{ width: 30, height: 30 }}
           />
         </TouchableOpacity>
       </View>

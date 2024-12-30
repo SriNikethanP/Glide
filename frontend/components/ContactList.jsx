@@ -5,9 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 
 export default function ContactList({ navigation }) {
-  const contacts = [
-
-  ];
+  
 
   return (
     <View style={styles.container}>

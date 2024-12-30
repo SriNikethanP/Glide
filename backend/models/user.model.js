@@ -1,12 +1,8 @@
 import mongoose from "mongoose";
+import path from "path";
 
 const userSchema = new mongoose.Schema(
   {
-    // user_id: {
-    //   type: String,
-    //   required: true,
-    //   unique: true,
-    // },
     email: {
       type: String,
       required: true,
@@ -17,11 +13,6 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    // username: {
-    //   type: String,
-    //   required: true,
-    //   unique: true,
-    // },
     password: {
       type: String,
       required: true,
@@ -29,7 +20,10 @@ const userSchema = new mongoose.Schema(
     },
     profilePic: {
       type: String,
-      default: "",
+      default: function () {
+        // Use the RoboHash API with the user's full name or _id
+        return `https://robohash.org/${this._id}`;
+      },
     },
     lastActive: {
       type: Date,

@@ -20,7 +20,6 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-
   const handleLogin = async () => {
     setLoading(true);
     try {
@@ -42,12 +41,8 @@ export default function Login() {
       }
 
       const data = await response.json();
-      console.log("Login successful:", data);
-
-      // Save the token in AsyncStorage
       await AsyncStorage.setItem("token", data.token);
-
-      console.log("Token saved to AsyncStorage");
+      await AsyncStorage.setItem("senderId", data._id);
       navigation.push("Home");
     } catch (error) {
       console.error("Error during login:", error.message);
