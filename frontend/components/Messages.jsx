@@ -225,7 +225,7 @@ export default function MessageScreen({ route, navigation }) {
         <TouchableOpacity
           onPress={() => {
             navigation.push("Home");
-            setSelectedUser(null);
+            // setSelectedUser(null);
           }}
           style={styles.backButton}
         >
