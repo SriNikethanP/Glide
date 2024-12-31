@@ -11,32 +11,33 @@ import {
 import React, { useEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import { getContacts } from "../utils/api";
+import { formatTime } from "../utils/utils";
+import { useChatStore } from "../store/useChatStore";
+import { useAuthStore } from "../store/useAuthStore";
 
 export default function Home() {
   const navigation = useNavigation();
   const [showOptions, setShowOptions] = useState(false);
-  const [starredChats, setStarredChats] = useState([]);
-  const [chats, setChats] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading } =
+    useChatStore();
+  const { onlineUsers } = useAuthStore();
+  const [showOnlineOnly, setShowOnlineOnly] = useState(false);
+  const { logout, authUser } = useAuthStore();
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true); // Show loading state
-      const chats = await getContacts(); // Call the API function
-      setChats(chats);
-      setLoading(false);
-      // console.log("chats:", chats);
-    };
-    fetchData();
-  }, []);
+    getUsers();
+  }, [getUsers]);
+
+  const filteredUsers = showOnlineOnly
+    ? users.filter((user) => onlineUsers.includes(user._id))
+    : users;
 
   const handleChatPress = (chat) => {
     navigation.navigate("Messages", {
       userId: chat._id,
       username: chat.fullName,
       userImage: chat.profilePic,
-      lastSeen: formatLastActiveTime(chat.lastActive),
+      lastSeen: formatTime(chat.lastActive),
       isOnline: chat.onlineStatus,
     });
   };
@@ -58,22 +59,20 @@ export default function Home() {
           <TouchableOpacity style={styles.optionItem}>
             <Text style={styles.optionText}>Settings</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.optionItem}
+            onPress={() => {
+              navigation.push("Login");
+              logout();
+            }}
+          >
+            <Text style={styles.logoutText}>Log Out</Text>
+          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     </Modal>
   );
-  function formatLastActiveTime(lastActive) {
-    const date = new Date(lastActive);
 
-    // Extract hours and minutes
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-
-    // Format time as hh:mm (24-hour format)
-    const formattedTime = `${hours}:${minutes.toString().padStart(2, "0")}`;
-
-    return formattedTime;
-  }
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -85,47 +84,36 @@ export default function Home() {
             <Ionicons name="ellipsis-vertical" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
-        <View style={styles.searchbar}>
-          <TextInput
-            placeholder="Search..."
-            style={styles.searchInput}
-            placeholderTextColor="#666"
-          />
-        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.chatListContainer}>
-        <Text style={styles.recentHeader}>Recent Messages</Text>
-        {chats && chats.length > 0 ? (
-          chats.map((chat) => (
+        <Text style={styles.recentHeader}>Contacts</Text>
+        {users && users.length > 0 ? (
+          users.map((user) => (
             <TouchableOpacity
-              key={chat._id}
-              onPress={() => handleChatPress(chat)}
+              key={user._id}
+              onPress={() => {
+                setSelectedUser(user);
+                handleChatPress(user);
+              }}
             >
               <View style={styles.chatItem}>
                 <View style={styles.avatarContainer}>
                   <Image
-                    source={{ uri: chat.profilePic }}
+                    source={{ uri: user.profilePic }}
                     style={styles.chatImage}
                   />
-                  {chat.onlineStatus && <View style={styles.onlineIndicator} />}
+                  {onlineUsers.includes(user._id) && (
+                    <View style={styles.onlineIndicator} />
+                  )}
                 </View>
                 <View style={styles.chatDetails}>
-                  <Text style={styles.username}>{chat.fullName}</Text>
-                  {/* <Text style={styles.chatText}>{chat.text}</Text> */}
+                  <Text style={styles.username}>{user.fullName}</Text>
                 </View>
                 <View style={styles.chatTimeContainer}>
                   <Text style={styles.timestamp}>
-                    {formatLastActiveTime(chat.lastActive)}
+                    {formatTime(user.lastActive)}
                   </Text>
-                  {starredChats.includes(chat.id) && (
-                    <Ionicons
-                      name="star"
-                      size={16}
-                      color="#FFD700"
-                      style={styles.starIcon}
-                    />
-                  )}
                 </View>
               </View>
             </TouchableOpacity>
@@ -147,7 +135,7 @@ export default function Home() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navButton}
-          onPress={() => navigation.navigate("ContactList")}
+          // onPress={() => navigation.navigate("ContactList")}
         >
           <Image
             source={require("../assets/User_icon.png")}
@@ -168,7 +156,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   header: {
-    height: 150,
+    height: 100,
     flexDirection: "column",
     paddingHorizontal: 18,
     backgroundColor: "#24B2FF",
@@ -182,7 +170,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 30,
+    marginTop: 40,
   },
   searchbar: {
     flexDirection: "row",
@@ -203,7 +191,7 @@ const styles = StyleSheet.create({
   recentHeader: {
     margin: 7,
     marginBottom: 5,
-    fontSize: 16,
+    fontSize: 24,
     fontWeight: "bold",
   },
   chatItem: {
@@ -300,5 +288,9 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 16,
     color: "#333",
+  },
+  logoutText: {
+    fontSize: 16,
+    color: "red",
   },
 });

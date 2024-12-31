@@ -7,49 +7,24 @@ import {
   TextInput,
   TouchableOpacity,
 } from "react-native";
-import React from "react";
-import axios from "axios";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
+import React, { useState } from "react";
 import { useNavigation } from "@react-navigation/native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useAuthStore } from "../store/useAuthStore";
 
 export default function Login() {
-  const navigation = useNavigation();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+  const { login } = useAuthStore();
 
-  const handleLogin = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(
-        "http://192.168.31.211:5000/api/auth/login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email, password }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Login Error:", errorData.message);
-        throw new Error(errorData.message || "Login failed");
-      }
-
-      const data = await response.json();
-      await AsyncStorage.setItem("token", data.token);
-      await AsyncStorage.setItem("senderId", data._id);
-      navigation.push("Home");
-    } catch (error) {
-      console.error("Error during login:", error.message);
-    } finally {
-      setLoading(false);
-    }
+  const handleSubmit = () => {
+    login(formData);
+    navigation.push("Home");
   };
+
+  const navigation = useNavigation();
 
   return (
     <SafeAreaView
@@ -72,22 +47,22 @@ export default function Login() {
             <TextInput
               style={styles.input}
               placeholder="Enter your email"
-              value={email}
-              onChangeText={setEmail}
+              value={formData.email}
+              onChangeText={(e) => setFormData({ ...formData, email: e })}
             />
             <Text style={styles.textlabel}>Password</Text>
             <TextInput
               style={styles.input}
               placeholder="Enter your password"
               secureTextEntry
-              value={password}
-              onChangeText={setPassword}
+              value={formData.password}
+              onChangeText={(e) => setFormData({ ...formData, password: e })}
             />
           </View>
           <View>
             <TouchableOpacity
               style={styles.loginbutton}
-              onPress={() => handleLogin()}
+              onPress={() => handleSubmit()}
             >
               <Text
                 style={{

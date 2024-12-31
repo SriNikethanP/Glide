@@ -12,142 +12,89 @@ import {
   Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getMessages } from "../utils/api";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { formatDate, formatTime } from "../utils/utils";
+import { useChatStore } from "../store/useChatStore";
+import { useAuthStore } from "../store/useAuthStore";
 
 export default function MessageScreen({ route, navigation }) {
-  const { userId, username, userImage, lastSeen, isOnline } = route.params;
+  const {
+    messages,
+    getMessages,
+    isMessagesLoading,
+    selectedUser,
+    setSelectedUser,
+    subscribeToMessages,
+    unsubscribeFromMessages,
+    sendMessage,
+  } = useChatStore();
+  const { authUser, onlineUsers } = useAuthStore();
+
+  const [text, setText] = useState("");
+  const [imagePreview, setImagePreview] = useState(null);
+  const fileInputRef = useRef(null);
   const scrollViewRef = useRef();
-  const [message, setMessage] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
 
-  const [chatMessages, setChatMessages] = useState([]);
-
   useEffect(() => {
-    const fetchMessages = async () => {
-      try {
-        const messages = await getMessages(userId);
-        setChatMessages(messages);
-      } catch (error) {
-        console.error("Error fetching messages:", error);
-      }
-    };
-    fetchMessages();
-  }, [userId]);
+    getMessages(selectedUser._id);
 
-  // Auto scroll to bottom when new messages arrive
+    subscribeToMessages();
+
+    return () => unsubscribeFromMessages();
+  }, [
+    selectedUser._id,
+    getMessages,
+    subscribeToMessages,
+    unsubscribeFromMessages,
+  ]);
   useEffect(() => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
-  }, [chatMessages]);
-
-  const formatDate = (dateString) => {
-    const messageDate = new Date(dateString);
-
-    // Check if the date is valid
-    if (!messageDate) {
-      console.error("Invalid date:", dateString);
-      return "";
-    }
-
-    const today = new Date();
-
-    // Reset the time part for comparison purposes (only date)
-    today.setHours(0, 0, 0, 0);
-
-    // Check if the message was sent today
-    if (messageDate >= today) {
-      return "Today";
-    }
-
-    // Check if the message was sent yesterday
-    const yesterday = new Date(today);
-    yesterday.setDate(today.getDate() - 1);
-
-    if (messageDate >= yesterday && messageDate < today) {
-      return "Yesterday";
-    }
-
-    // For older dates, format in the "Month Day, Year" format
-    return messageDate.toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
+  }, [messages]);
 
   const DateSeparator = ({ date }) => (
     <View style={styles.dateSeparatorContainer}>
       <Text style={styles.dateSeparatorText}>{formatDate(date)}</Text>
     </View>
   );
-  function formatMessageTime(timestamp) {
-    const date = new Date(timestamp);
 
-    // Extract hours and minutes
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
+  const handleImageChange = () => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
 
-    // Format time as hh:mm (24-hour format)
-    const formattedTime = `${hours}:${minutes.toString().padStart(2, "0")}`;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
 
-    return formattedTime;
-  }
-  const sendMessage = async () => {
-    if (message.trim().length > 0) {
-      try {
-        const senderId = await AsyncStorage.getItem("senderId");
-        if (!senderId) {
-          console.log("SenderId not found in AsyncStorage");
-          return;
-        }
+  const removeImage = () => {
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
-        const response = await fetch(
-          `http://192.168.31.211:5000/api/messages/send/${userId}`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              senderId: senderId,
-              receiverId: userId,
-              text: message,
-            }),
-          }
-        );
+  const handleSendMessage = async () => {
+    if (!text.trim() && !imagePreview) return;
 
-        const data = await response.json();
+    try {
+      await sendMessage({
+        text: text.trim(),
+        image: imagePreview,
+      });
 
-        if (response.ok) {
-          // Update the chat UI with the new message
-          const newMessage = {
-            ...data, // Use the data received from the backend
-            // This will depend on your app's logic
-            senderImage: userImage, // You can pass the user image if needed
-          };
-
-          setChatMessages((prevMessages) => [...prevMessages, newMessage]);
-          setMessage(""); // Clear input field
-
-          // Scroll to bottom after sending message
-          setTimeout(() => {
-            scrollViewRef.current?.scrollToEnd({ animated: true });
-          }, 100);
-
-          console.log("Message sent to backend:", data);
-        } else {
-          console.error("Error sending message:", data);
-        }
-      } catch (error) {
-        console.error("Failed to send message:", error);
-      }
+      // Clear form
+      setText("");
+      setImagePreview(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch (error) {
+      console.error("Failed to send message:", error);
     }
   };
 
-  const MessageBubble = ({ message }) => {
-    const isSender = message.senderId === userId;
+  const MessageBubble = ({ chat }) => {
+    const isSender = chat.senderId === authUser._id;
 
     return (
       <View
@@ -158,7 +105,7 @@ export default function MessageScreen({ route, navigation }) {
       >
         {!isSender && (
           <Image
-            source={{ uri: message.senderImage }}
+            source={{ uri: authUser.profilePic }}
             style={styles.messageAvatar}
           />
         )}
@@ -169,43 +116,79 @@ export default function MessageScreen({ route, navigation }) {
             isSender ? styles.senderContainer : styles.receiverContainer,
           ]}
         >
-          <View style={styles.bubbleWrapper}>
-            <View style={styles.messageMetadata}>
-              {isSender && (
-                <Text style={styles.seenStatus}>
-                  {message.seen ? " " : "1"}
+          {isSender && (
+            <View style={styles.bubbleWrapper}>
+              <View style={styles.messageMetadata}>
+                {isSender && (
+                  <Text style={styles.seenStatus}>{chat.seen ? " " : "1"}</Text>
+                )}
+                <Text
+                  style={[
+                    styles.timestamp,
+                    isSender
+                      ? styles.senderTimestamp
+                      : styles.receiverTimestamp,
+                  ]}
+                >
+                  {formatTime(chat.createdAt)}
                 </Text>
-              )}
-              <Text
-                style={[
-                  styles.timestamp,
-                  isSender ? styles.senderTimestamp : styles.receiverTimestamp,
-                ]}
-              >
-                {formatMessageTime(message.timestamp)}
-              </Text>
-            </View>
+              </View>
 
-            <View
-              style={[
-                styles.messageBubble,
-                isSender ? styles.senderBubble : styles.receiverBubble,
-              ]}
-            >
-              <Text
+              <View
                 style={[
-                  styles.messageText,
-                  isSender ? styles.senderText : styles.receiverText,
+                  styles.messageBubble,
+                  isSender ? styles.senderBubble : styles.receiverBubble,
                 ]}
               >
-                {message.text}
-              </Text>
+                <Text
+                  style={[
+                    styles.messageText,
+                    isSender ? styles.senderText : styles.receiverText,
+                  ]}
+                >
+                  {chat.text}
+                </Text>
+              </View>
             </View>
-          </View>
+          )}
+          {!isSender && (
+            <View style={styles.bubbleWrapper}>
+              <View
+                style={[
+                  styles.messageBubble,
+                  isSender ? styles.senderBubble : styles.receiverBubble,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.messageText,
+                    isSender ? styles.senderText : styles.receiverText,
+                  ]}
+                >
+                  {chat.text}
+                </Text>
+              </View>
+              <View style={styles.messageMetadata}>
+                {isSender && (
+                  <Text style={styles.seenStatus}>{chat.seen ? " " : "1"}</Text>
+                )}
+                <Text
+                  style={[
+                    styles.timestamp,
+                    isSender
+                      ? styles.senderTimestamp
+                      : styles.receiverTimestamp,
+                  ]}
+                >
+                  {formatTime(chat.createdAt)}
+                </Text>
+              </View>
+            </View>
+          )}
         </View>
         {isSender && (
           <Image
-            source={{ uri: message.senderImage }}
+            source={{ uri: selectedUser.profilePic }}
             style={styles.messageAvatar}
           />
         )}
@@ -240,22 +223,26 @@ export default function MessageScreen({ route, navigation }) {
     >
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={() => {
+            navigation.push("Home");
+            setSelectedUser(null);
+          }}
           style={styles.backButton}
         >
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
 
-        <Image source={{ uri: userImage }} style={styles.profileImage} />
+        <Image
+          source={{ uri: selectedUser.profilePic }}
+          style={styles.profileImage}
+        />
 
         <View style={styles.headerInfo}>
-          <Text style={styles.userName}>{username}</Text>
+          <Text style={styles.userName}>{selectedUser.fullName}</Text>
           <Text style={styles.lastSeen}>
-            {isTyping
-              ? "typing..."
-              : isOnline
+            {onlineUsers.includes(selectedUser._id)
               ? "Online"
-              : `Last seen ${lastSeen}`}
+              : `Last seen ${formatTime(selectedUser.lastActive)}`}
           </Text>
         </View>
 
@@ -275,29 +262,45 @@ export default function MessageScreen({ route, navigation }) {
           scrollViewRef.current?.scrollToEnd({ animated: true })
         }
       >
-        {chatMessages.map((chat, index) => {
-          let showDate =
-            index === 0 || chatMessages[index - 1].date !== chat.date;
+        {messages && messages.length > 0 ? (
+          messages.map((chat, index) => {
+            const previousMessage = index > 0 ? messages[index - 1] : null;
 
-          return (
-            <View key={chat._id}>
-              {showDate && <DateSeparator date={chat.timestamp} />}
-              <MessageBubble message={chat} />
-            </View>
-          );
-        })}
+            const currentMessageDate = formatDate(chat.createdAt);
+            const previousMessageDate = previousMessage
+              ? formatDate(previousMessage.createdAt)
+              : null;
+
+            // Compare the current message date with the previous message date
+            const showDateSeparator =
+              currentMessageDate !== previousMessageDate;
+            return (
+              <View key={chat._id}>
+                {showDateSeparator && <DateSeparator date={chat.timestamp} />}
+                <MessageBubble chat={chat} />
+              </View>
+            );
+          })
+        ) : (
+          <View style={styles.dateSeparatorContainer}>
+            <Text style={styles.dateSeparatorText}>
+              Send a message to start conversation!
+            </Text>
+          </View>
+        )}
       </ScrollView>
 
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
-          value={message}
-          onChangeText={setMessage}
+          value={text}
+          onChangeText={setText}
           placeholder="Type a message..."
           multiline
           maxHeight={100}
         />
-        <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
+
+        <TouchableOpacity style={styles.sendButton} onPress={handleSendMessage}>
           <Ionicons name="send" size={24} color="white" />
         </TouchableOpacity>
       </View>
@@ -364,6 +367,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
+  senderTimestamp: {
+    textAlign: "right",
+  },
+  receiverTimestamp: {
+    textAlign: "left",
+  },
   lastSeen: {
     fontSize: 12,
     color: "#666",
@@ -377,6 +386,17 @@ const styles = StyleSheet.create({
   },
   chatContent: {
     paddingVertical: 10,
+  },
+  messageContainer: {
+    flexDirection: "row",
+    marginVertical: 4,
+    paddingHorizontal: 8,
+  },
+  senderContainer: {
+    justifyContent: "flex-end",
+  },
+  receiverContainer: {
+    justifyContent: "flex-start",
   },
   messageRow: {
     flexDirection: "row",
@@ -486,7 +506,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     marginHorizontal: 10,
     fontSize: 12,
-    color: "#fff",
+    padding: 4,
     paddingHorizontal: 12,
     paddingVertical: 3,
     backgroundColor: "rgba(0, 0, 0, 0.3)",

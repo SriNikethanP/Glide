@@ -10,49 +10,37 @@ import {
 import React, { useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import { useNavigation } from "@react-navigation/native";
-import axios from "axios";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { ToastAndroid } from "react-native";
+import { useAuthStore } from "../store/useAuthStore";
 
 export default function Signup() {
   const navigation = useNavigation();
+  const [formData, setFormData] = useState({
+    fullName: "",
+    email: "",
+    password: "",
+  });
+  const { signup } = useAuthStore();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [fullName, setfullName] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const validateForm = () => {
+    if (!formData.fullName.trim())
+      return ToastAndroid.error("Full name is required");
+    if (!formData.email.trim()) return ToastAndroid.error("Email is required");
+    if (!/\S+@\S+\.\S+/.test(formData.email))
+      return ToastAndroid.error("Invalid email format");
+    if (!formData.password) return ToastAndroid.error("Password is required");
+    if (formData.password.length < 6)
+      return ToastAndroid.error("Password must be at least 6 characters");
 
-  const handleSignup = async () => {
-    setLoading(true);
-    try {
-      // Make the POST request to the backend API
-      const response = await axios.post(
-        "http://192.168.31.211:5000/api/auth/signup",
-        {
-          fullName,
-          email,
-          password,
-        }
-      );
+    return true;
+  };
+  const handleSubmit = () => {
 
-      // console.log("User registered successfully:", response.data);
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Signup Error:", errorData.message);
-        throw new Error(errorData.message || "Signup failed");
-      }
-      const data = await response.json();
-      await AsyncStorage.setItem("senderId", data._id);
-      setfullName("");
-      setEmail("");
-      setPassword("");
-      setError("");
+    const success = validateForm();
+
+    if (success === true) {
+      signup(formData);
       navigation.push("Home");
-    } catch (err) {
-      console.error("Error during signup:", err.response?.data || err.message);
-      setError(err.response?.data?.error || "Signup failed");
-    } finally {
-      setLoading(false); // Hide loading
     }
   };
 
@@ -85,23 +73,23 @@ export default function Signup() {
             <TextInput
               style={styles.input}
               placeholder="Enter your Full Name"
-              value={fullName}
-              onChangeText={setfullName}
+              value={formData.fullName}
+              onChangeText={(e) => setFormData({ ...formData, fullName: e })}
             />
             <Text style={styles.textlabel}>Email</Text>
             <TextInput
               style={styles.input}
               placeholder="Enter your Email"
-              value={email}
-              onChangeText={setEmail}
+              value={formData.email}
+              onChangeText={(e) => setFormData({ ...formData, email: e })}
               keyboardType="email-address"
             />
             <Text style={styles.textlabel}>Password</Text>
             <TextInput
               style={styles.input}
               placeholder="Enter your Password"
-              value={password}
-              onChangeText={setPassword}
+              value={formData.password}
+              onChangeText={(e) => setFormData({ ...formData, password: e })}
               secureTextEntry
             />
           </View>
@@ -109,7 +97,7 @@ export default function Signup() {
           <View>
             <TouchableOpacity
               style={styles.loginbutton}
-              onPress={() => handleSignup()}
+              onPress={() => handleSubmit()}
             >
               <Text
                 style={{
