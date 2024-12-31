@@ -25,6 +25,8 @@ export const protectRoute = async (req, res, next) => {
 
     req.user = user;
 
+    // res.json({ tokn: token });
+
     next();
   } catch (error) {
     console.log("Error in protectRoute:", error.message);

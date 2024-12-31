@@ -1,36 +1,16 @@
-import { View, Text, StyleSheet, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
-import React from 'react';
-import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import Home from './Home';
-
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  Image,
+  TouchableOpacity,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useState, useEffect } from "react";
 
 export default function ContactList({ navigation }) {
-  const contacts = [
-    {
-      id: 1,
-      name: 'John Doe',
-      bio: 'Living life one day at a time',
-      image: 'https://via.placeholder.com/50',
-      isOnline: true,
-    },
-    {
-      id: 2,
-      name: 'Jane Smith',
-      bio: 'Photography enthusiast',
-      image: 'https://via.placeholder.com/50',
-      isOnline: false,
-    },
-    {
-      id: 3,
-      name: 'Michael Johnson',
-      bio: 'Software Developer',
-      image: 'https://via.placeholder.com/50',
-      isOnline: true,
-    },
-    // Add more contacts as needed
-  ];
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -71,11 +51,20 @@ export default function ContactList({ navigation }) {
       </ScrollView>
 
       <View style={styles.bottomnavbar}>
-        <TouchableOpacity style={styles.navButton} onPress={()=>navigation.navigate('Home')}>
-          <Image source={require('../assets/home_icon.png')} style={{width:30, height:30}} />
+        <TouchableOpacity
+          style={styles.navButton}
+          onPress={() => navigation.navigate("Home")}
+        >
+          <Image
+            source={require("../assets/home_icon.png")}
+            style={{ width: 30, height: 30 }}
+          />
         </TouchableOpacity>
         <TouchableOpacity style={styles.navButton}>
-          <Image source={require('../assets/User_icon.png')} style={{width:35, height:35}} />
+          <Image
+            source={require("../assets/User_icon.png")}
+            style={{ width: 35, height: 35 }}
+          />
         </TouchableOpacity>
       </View>
     </View>
@@ -85,11 +74,11 @@ export default function ContactList({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f2f2f2',
+    backgroundColor: "#f2f2f2",
     marginTop: 20,
   },
   header: {
-    backgroundColor: '#24B2FF',
+    backgroundColor: "#24B2FF",
     paddingHorizontal: 18,
     paddingTop: 15,
     paddingBottom: 15,
@@ -97,13 +86,13 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 10,
   },
   headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   headerIcons: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   iconButton: {
     marginLeft: 20,
@@ -116,17 +105,17 @@ const styles = StyleSheet.create({
     margin: 7,
     marginBottom: 5,
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   contactItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   avatarContainer: {
-    position: 'relative',
+    position: "relative",
   },
   contactImage: {
     width: 60,
@@ -135,39 +124,39 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   onlineIndicator: {
-    position: 'absolute',
+    position: "absolute",
     right: 15,
     bottom: 0,
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: "#fff",
   },
   contactDetails: {
     flex: 1,
   },
   contactName: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 4,
   },
   contactBio: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
   bottomnavbar: {
-    position: 'absolute',
-    width: '100%',
+    position: "absolute",
+    width: "100%",
     height: 60,
     bottom: 0,
-    backgroundColor: '#24B2FF',
-    flexDirection: 'row',
+    backgroundColor: "#24B2FF",
+    flexDirection: "row",
     borderTopWidth: 1,
-    borderTopColor: '#ddd',
-    justifyContent: 'space-around',
-    alignItems: 'center',
+    borderTopColor: "#ddd",
+    justifyContent: "space-around",
+    alignItems: "center",
   },
   navButton: {
     margin: 10,
